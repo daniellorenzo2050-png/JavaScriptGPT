@@ -2,20 +2,43 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // 1. Se a requisição for GET, retorna a Interface HTML5 do Chat
+    // 1. Se a requisição for GET, retorna a Interface HTML5 com layout de tela cheia
     if (request.method === 'GET') {
       const htmlContent = `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JavaScriptGPT - Qwen2.5-Coder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Ajustes finos para comportamento de aplicativo de tela cheia */
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen flex flex-col justify-between">
+<body class="bg-slate-950 text-slate-100">
     
-    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shadow-md">
+    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shadow-md shrink-0">
         <div class="flex items-center gap-3">
             <div class="bg-yellow-500 text-slate-950 font-bold px-3 py-1 rounded-md text-sm">JS-GPT</div>
             <div>
@@ -28,7 +51,7 @@ export default {
         </div>
     </header>
 
-    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 max-w-4xl w-full mx-auto">
+    <main id="chat-container" class="p-4 space-y-4 max-w-4xl w-full mx-auto">
         <div class="flex items-start gap-3 bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
             <div class="bg-yellow-500 text-slate-950 font-bold w-8 h-8 rounded-full flex items-center justify-center shrink-0">IA</div>
             <div class="text-sm space-y-2">
@@ -38,12 +61,12 @@ export default {
         </div>
     </main>
 
-    <footer class="bg-slate-900 border-t border-slate-800 p-4 shadow-lg">
+    <footer class="bg-slate-900 border-t border-slate-800 p-4 shadow-lg shrink-0">
         <form id="chat-form" class="max-w-4xl mx-auto flex gap-3">
             <input 
                 type="text" 
                 id="user-input" 
-                placeholder="Ex: Crie um custom hook em React para gerenciar tema escuro/claro..." 
+                placeholder="Ex: Crie um custom hook em React..." 
                 class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-yellow-500 text-slate-100 placeholder-slate-500"
                 required
             >
@@ -63,7 +86,6 @@ export default {
         const container = document.getElementById('chat-container');
         const sendBtn = document.getElementById('send-btn');
 
-        // Token padrão configurado no worker para testes fáceis no navegador
         const API_TOKEN = "jsgpt_live_99f8a7b6c5d4e3f2a100112233445566";
 
         form.addEventListener('submit', async (e) => {
@@ -71,14 +93,12 @@ export default {
             const prompt = input.value.trim();
             if (!prompt) return;
 
-            // Adiciona mensagem do usuário
             appendMessage(prompt, 'user');
             input.value = '';
             input.disabled = true;
             sendBtn.disabled = true;
             sendBtn.textContent = 'Pensando...';
 
-            // Cria container para a resposta da IA
             const aiMessageDiv = appendMessage('', 'ai');
             const contentDiv = aiMessageDiv.querySelector('.message-content');
 
@@ -103,7 +123,6 @@ export default {
                     if (done) break;
                     
                     const chunk = decoder.decode(value, { stream: true });
-                    // Processa eventos SSE (Server-Sent Events) da Cloudflare AI
                     const lines = chunk.split('\\n');
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
@@ -116,9 +135,7 @@ export default {
                                     contentDiv.innerHTML = marked.parse(fullText);
                                     container.scrollTop = container.scrollHeight;
                                 }
-                            } catch (err) {
-                                // Ignora falhas de parse em pedaços incompletos
-                            }
+                            } catch (err) {}
                         }
                     }
                 }
