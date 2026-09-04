@@ -2,7 +2,6 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // 1. Interface HTML5 atualizada com suporte a upload/envio de imagens
     if (request.method === 'GET') {
       const htmlContent = `<!DOCTYPE html>
 <html lang="pt-BR" class="h-full">
@@ -43,7 +42,7 @@ export default {
             <div class="bg-yellow-500 text-slate-950 font-bold w-8 h-8 rounded-full flex items-center justify-center shrink-0">IA</div>
             <div class="text-sm space-y-2">
                 <p class="font-semibold text-yellow-400">Olá! Eu sou o JavaScriptGPT com Visão.</p>
-                <p class="text-slate-300">Agora você pode colar prints de interfaces, erros de console ou diagramas para eu analisar e gerar o código correspondente.</p>
+                <p class="text-slate-300">Envie prints de códigos, erros de console ou layouts para eu analisar e ajudar na correção.</p>
             </div>
         </div>
     </main>
@@ -62,7 +61,7 @@ export default {
                 <input 
                     type="text" 
                     id="user-input" 
-                    placeholder="Faça uma pergunta ou envie uma imagem do seu layout..." 
+                    placeholder="Faça uma pergunta ou envie uma imagem..." 
                     class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-yellow-500 text-slate-100 placeholder-slate-500"
                 >
                 <button 
@@ -89,17 +88,38 @@ export default {
         const API_TOKEN = "jsgpt_live_99f8a7b6c5d4e3f2a100112233445566";
         let base64Image = null;
 
+        // Função para redimensionar imagem automaticamente antes de gerar o base64
         imageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(uploadEvent) {
-                    base64Image = uploadEvent.target.result;
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Converte para JPEG otimizado
+                    base64Image = canvas.toDataURL('image/jpeg', 0.8);
                     imageNameSpan.textContent = file.name;
                     imagePreviewContainer.classList.remove('hidden');
                 };
-                reader.readAsDataURL(file);
-            }
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
         });
 
         removeImageBtn.addEventListener('click', () => {
@@ -140,7 +160,10 @@ export default {
                     body: JSON.stringify({ prompt: currentPrompt, image: currentImage })
                 });
 
-                if (!response.ok) throw new Error('Erro na requisição à API Multimodal.');
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.details || errData.error || 'Erro na requisição à API Multimodal.');
+                }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
@@ -190,7 +213,7 @@ export default {
                 </div>
                 <div class="max-w-[80%] bg-\${isUser ? 'slate-800' : 'slate-900/60'} border border-slate-800 p-4 rounded-xl text-sm leading-relaxed message-content overflow-x-auto">
                     \${imgHtml}
-                    \${isUser ? escapeHtml(text) : '<span class="animate-pulse text-slate-400">Analisando código e imagem...</span>'}
+                    \${isUser ? escapeHtml(text) : '<span class="animate-pulse text-slate-400">Analisando imagem e código...</span>'}
                 </div>
             \`;
             container.appendChild(wrapper);
@@ -210,7 +233,6 @@ export default {
       });
     }
 
-    // 2. Processamento POST da API com o modelo Qwen-VL na Cloudflare
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Método não permitido.' }), {
         status: 405,
@@ -231,27 +253,31 @@ export default {
     try {
       const body = await request.json();
       const userPrompt = body.prompt || "Analise esta imagem.";
-      const base64Image = body.image; // String Base64 opcional enviada pelo front
+      const base64Image = body.image;
 
-      // Parâmetros de payload suportados pelo modelo de visão Qwen-VL na Cloudflare
       const aiPayload = {
         prompt: userPrompt,
         stream: true
       };
 
-      // Se houver imagem, convertemos o base64 para array de bytes que o binding AI da Cloudflare aceita
       if (base64Image) {
-        const base64Data = base64Image.split(',')[1];
-        const binaryString = atob(base64Data);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        try {
+          const base64Data = base64Image.split(',')[1] || base64Image;
+          const binaryString = atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          aiPayload.image = Array.from(bytes);
+        } catch (imgErr) {
+          return new Response(JSON.stringify({ error: 'Falha ao processar os bytes da imagem.', details: imgErr.message }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
         }
-        aiPayload.image = [...bytes];
       }
 
-      // Execução do modelo multimodal Qwen na Edge
       const aiResponse = await env.AI.run('@cf/qwen/qwen2.5-vl-7b-instruct', aiPayload);
 
       return new Response(aiResponse, {
