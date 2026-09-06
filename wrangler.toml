@@ -4,22 +4,18 @@ compatibility_date = "2026-01-01"
 
 compatibility_flags = ["nodejs_compat"]
 
-# Habilita o Workers AI nativamente na Cloudflare
 [ai]
 binding = "AI"
 
-# 1. Configuração do KV chamado JavaScriptKV
 kv_namespaces = [
   { binding = "JavaScriptKV", id = "244f9786d69e40608cf4b894f255da0a" }
 ]
 
-# 2. Configuração do Banco D1 chamado JavaScriptD1
 [[d1_databases]]
 binding = "JavaScriptD1"
 database_name = "javascriptgpt-db"
 database_id = "dc751040-8565-4206-ae9d-2cd3b3898cd9"
 
-# 3. Configuração do Durable Objects
 [durable_objects]
 bindings = [
   { name = "CHAT_SESSION", class_name = "ChatSessionDO" }
