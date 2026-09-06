@@ -1,1 +1,232 @@
-export default{async fetch(e,n,t){new URL(e.url);if("GET"===e.method){return new Response('<!DOCTYPE html>\n<html lang="pt-BR" class="h-full">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>JavaScriptGPT - Llama Vision</title>\n    <link rel="preconnect" href="https://fonts.googleapis.com">\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">\n    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n    <script src="https://cdn.tailwindcss.com"><\/script>\n    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>\n    <style>\n        * { box-sizing: border-box; }\n        body {\n            margin: 0; padding: 0; height: 100vh; height: 100dvh;\n            display: flex; flex-direction: column; overflow: hidden;\n            background-color: #020617; color: #f8fafc;\n            font-family: \'Inter\', \'Noto Color Emoji\', sans-serif;\n        }\n        #chat-container { flex: 1; overflow-y: auto; scroll-behavior: smooth; }\n    </style>\n</head>\n<body class="bg-slate-950 text-slate-100">\n    \n    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shadow-md shrink-0">\n        <div class="flex items-center gap-3">\n            <div class="bg-yellow-500 text-slate-950 font-bold px-3 py-1 rounded-md text-sm flex items-center gap-1.5">\n                <i class="fa-solid fa-code"></i> JS-GPT\n            </div>\n            <div>\n                <h1 class="font-bold text-lg leading-tight flex items-center gap-2">\n                    JavaScriptGPT <i class="fa-solid fa-eye text-yellow-400 text-sm"></i>\n                </h1>\n                <p class="text-xs text-slate-400">Powered by Llama 3.2 Vision & Cloudflare Edge</p>\n            </div>\n        </div>\n        <div class="text-xs bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 text-slate-300 flex items-center gap-1.5">\n            <i class="fa-solid fa-circle text-emerald-500 text-[10px]"></i> Pronto\n        </div>\n    </header>\n\n    <main id="chat-container" class="p-4 space-y-4 max-w-4xl w-full mx-auto">\n        <div class="flex items-start gap-3 bg-slate-900/60 border border-slate-800 p-4 rounded-xl">\n            <div class="bg-yellow-500 text-slate-950 font-bold w-8 h-8 rounded-full flex items-center justify-center shrink-0">\n                <i class="fa-solid fa-robot"></i>\n            </div>\n            <div class="text-sm space-y-2">\n                <p class="font-semibold text-yellow-400">Olá! Eu sou o JavaScriptGPT.</p>\n                <p class="text-slate-300">Estes recursos visuais usam <strong>Google Fonts (Noto Color Emoji)</strong> e ícones do <strong>Font Awesome</strong>. Envie seu código ou print para analisar!</p>\n            </div>\n        </div>\n    </main>\n\n    <footer class="bg-slate-900 border-t border-slate-800 p-4 shadow-lg shrink-0">\n        <form id="chat-form" class="max-w-4xl mx-auto flex flex-col gap-2">\n            <div id="image-preview-container" class="hidden flex items-center gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 w-fit">\n                <span id="image-name" class="text-xs text-yellow-400 truncate max-w-xs"></span>\n                <button type="button" id="remove-image" class="text-slate-400 hover:text-red-400 text-xs font-bold px-1">\n                    <i class="fa-solid fa-xmark"></i>\n                </button>\n            </div>\n            <div class="flex gap-3">\n                <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-3 rounded-lg text-sm cursor-pointer flex items-center justify-center transition border border-slate-700">\n                    <i class="fa-solid fa-camera"></i>\n                    <input type="file" id="image-input" accept="image/*" class="hidden">\n                </label>\n                <input \n                    type="text" \n                    id="user-input" \n                    placeholder="Faça uma pergunta ou envie uma imagem..." \n                    class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-yellow-500 text-slate-100 placeholder-slate-500 font-[\'Inter\', \'Noto_Color_Emoji\']"\n                >\n                <button \n                    type="submit" \n                    id="send-btn"\n                    class="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-semibold px-6 py-3 rounded-lg text-sm transition flex items-center justify-center gap-2 min-w-[110px]"\n                >\n                    <i class="fa-solid fa-paper-plane"></i> Enviar\n                </button>\n            </div>\n        </form>\n    </footer>\n\n    <script>\n        const form = document.getElementById(\'chat-form\');\n        const input = document.getElementById(\'user-input\');\n        const container = document.getElementById(\'chat-container\');\n        const sendBtn = document.getElementById(\'send-btn\');\n        const imageInput = document.getElementById(\'image-input\');\n        const imagePreviewContainer = document.getElementById(\'image-preview-container\');\n        const imageNameSpan = document.getElementById(\'image-name\');\n        const removeImageBtn = document.getElementById(\'remove-image\');\n\n        const API_TOKEN = "jsgpt_live_99f8a7b6c5d4e3f2a100112233445566";\n        let base64Image = null;\n\n        imageInput.addEventListener(\'change\', (e) => {\n            const file = e.target.files[0];\n            if (!file) return;\n\n            const reader = new FileReader();\n            reader.onload = function(event) {\n                const img = new Image();\n                img.onload = function() {\n                    const canvas = document.createElement(\'canvas\');\n                    const MAX_WIDTH = 800;\n                    let width = img.width;\n                    let height = img.height;\n\n                    if (width > MAX_WIDTH) {\n                        height = Math.round((height * MAX_WIDTH) / width);\n                        width = MAX_WIDTH;\n                    }\n\n                    canvas.width = width;\n                    canvas.height = height;\n                    const ctx = canvas.getContext(\'2d\');\n                    ctx.drawImage(img, 0, 0, width, height);\n\n                    base64Image = canvas.toDataURL(\'image/jpeg\', 0.8);\n                    imageNameSpan.textContent = file.name;\n                    imagePreviewContainer.classList.remove(\'hidden\');\n                };\n                img.src = event.target.result;\n            };\n            reader.readAsDataURL(file);\n        });\n\n        removeImageBtn.addEventListener(\'click\', () => {\n            base64Image = null;\n            imageInput.value = \'\';\n            imagePreviewContainer.classList.add(\'hidden\');\n        });\n\n        form.addEventListener(\'submit\', async (e) => {\n            e.preventDefault();\n            const prompt = input.value.trim();\n            if (!prompt && !base64Image) return;\n\n            appendMessage(prompt, \'user\', base64Image);\n            \n            const currentPrompt = prompt;\n            const currentImage = base64Image;\n\n            input.value = \'\';\n            base64Image = null;\n            imageInput.value = \'\';\n            imagePreviewContainer.classList.add(\'hidden\');\n            \n            input.disabled = true;\n            sendBtn.disabled = true;\n            sendBtn.innerHTML = \'<i class="fa-solid fa-spinner animate-spin"></i> Pensando\';\n\n            const aiMessageDiv = appendMessage(\'\', \'ai\');\n            const contentDiv = aiMessageDiv.querySelector(\'.message-content\');\n\n            try {\n                const response = await fetch(window.location.href, {\n                    method: \'POST\',\n                    headers: {\n                        \'Content-Type\': \'application/json\',\n                        \'Authorization\': `Bearer ${API_TOKEN}`\n                    },\n                    body: JSON.stringify({ prompt: currentPrompt, image: currentImage })\n                });\n\n                if (!response.ok) {\n                    const errData = await response.json();\n                    throw new Error(errData.details || errData.error || \'Erro na requisição.\');\n                }\n\n                const reader = response.body.getReader();\n                const decoder = new TextDecoder();\n                let fullText = \'\';\n\n                while (true) {\n                    const { done, value } = await reader.read();\n                    if (done) break;\n                    \n                    const chunk = decoder.decode(value, { stream: true });\n                    const lines = chunk.split(\'\\n\');\n                    for (const line of lines) {\n                        if (line.startsWith(\'data: \')) {\n                            const dataStr = line.replace(\'data: \', \'\').trim();\n                            if (dataStr === \'[DONE]\') continue;\n                            try {\n                                const json = JSON.parse(dataStr);\n                                if (json.response) {\n                                    fullText += json.response;\n                                    contentDiv.innerHTML = marked.parse(fullText);\n                                    container.scrollTop = container.scrollHeight;\n                                }\n                            } catch (err) {}\n                        }\n                    }\n                }\n            } catch (err) {\n                contentDiv.innerHTML = `<span class="text-red-400">Erro: ${err.message}</span>`;\n            } finally {\n                input.disabled = false;\n                sendBtn.disabled = false;\n                sendBtn.innerHTML = \'<i class="fa-solid fa-paper-plane"></i> Enviar\';\n                input.focus();\n            }\n        });\n\n        function appendMessage(text, sender, img = null) {\n            const isUser = sender === \'user\';\n            const wrapper = document.createElement(\'div\');\n            wrapper.className = `flex items-start gap-3 ${isUser ? \'flex-row-reverse\' : \'\'}`;\n            \n            let imgHtml = img ? `<img src="${img}" class="max-w-xs rounded-lg mb-2 border border-slate-700">` : \'\';\n\n            wrapper.innerHTML = `\n                <div class="${isUser ? \'bg-cyan-600 text-white\' : \'bg-yellow-500 text-slate-950\'} font-bold w-8 h-8 rounded-full flex items-center justify-center shrink-0">\n                    <i class="fa-solid ${isUser ? \'fa-user\' : \'fa-robot\'}"></i>\n                </div>\n                <div class="max-w-[80%] bg-${isUser ? \'slate-800\' : \'slate-900/60\'} border border-slate-800 p-4 rounded-xl text-sm leading-relaxed message-content overflow-x-auto">\n                    ${imgHtml}\n                    ${isUser ? escapeHtml(text) : \'<span class="animate-pulse text-slate-400"><i class="fa-solid fa-spinner animate-spin"></i> Analisando...</span>\'}\n                </div>\n            `;\n            container.appendChild(wrapper);\n            container.scrollTop = container.scrollHeight;\n            return wrapper;\n        }\n\n        function escapeHtml(str) {\n            return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : \'\';\n        }\n    <\/script>\n</body>\n</html>',{headers:{"Content-Type":"text/html;charset=UTF-8"}})}if("POST"!==e.method)return new Response(JSON.stringify({error:"Método não permitido."}),{status:405,headers:{"Content-Type":"application/json"}});const a=e.headers.get("Authorization"),s=n.JSGPT_API_TOKEN||"jsgpt_live_99f8a7b6c5d4e3f2a100112233445566";if(!a||a!==`Bearer ${s}`)return new Response(JSON.stringify({error:"Unauthorized: API Token inválido ou ausente."}),{status:401,headers:{"Content-Type":"application/json"}});try{const t=await e.json(),a=t.prompt||"Analise esta imagem.",s=t.image;try{await n.AI.run("@cf/meta/llama-3.2-11b-vision-instruct",{prompt:"agree"})}catch(e){}const r={prompt:a,stream:!0};if(s){const e=s.split(",")[1]||s,n=atob(e),t=n.length,a=new Uint8Array(t);for(let e=0;e<t;e++)a[e]=n.charCodeAt(e);r.image=Array.from(a)}const i=await n.AI.run("@cf/meta/llama-3.2-11b-vision-instruct",r);return new Response(i,{headers:{"Content-Type":"text/event-stream","Cache-Control":"no-cache",Connection:"keep-alive","Access-Control-Allow-Origin":"*"}})}catch(e){return new Response(JSON.stringify({error:"Erro interno ao processar a visão da IA",details:e.message}),{status:500,headers:{"Content-Type":"application/json"}})}}};
+import { randomUUID } from "node:crypto";
+
+const MODEL_IA = "@cf/zai-org/glm-5.2";
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // Proteção rigorosa: Bane o uso de fetch diretamente na raiz (GET /)
+    // Se a intenção for carregar a página, deve ser um GET normal sem requisições scriptadas maliciosas.
+    // Aqui garantimos que qualquer requisição POST deve ir para a rota correta de API ou sessão.
+    if (url.pathname === "/") {
+      if (request.method === "GET") {
+        const response = new Response(getFrontendHTML(), {
+          headers: { "Content-Type": "text/html;charset=UTF-8" }
+        });
+        return applySecurityHeaders(response);
+      } else {
+        // Bloqueia qualquer tentativa de fetch/POST direto na raiz "/"
+        const blockedResponse = new Response(JSON.stringify({ error: "Endpoint bloqueado por política de segurança." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" }
+        });
+        return applySecurityHeaders(blockedResponse);
+      }
+    }
+
+    // Gerenciamento de sessões via Durable Object para rotas de chat
+    const sessionId = url.searchParams.get("sessionId") || randomUUID();
+    const id = env.CHAT_SESSION.idFromName(sessionId);
+    const stub = env.CHAT_SESSION.get(id);
+
+    const backendResponse = await stub.fetch(request);
+    return applySecurityHeaders(backendResponse);
+  }
+};
+
+// Função centralizada que injeta todos os headers HTTP de segurança máxima (CSP, HSTS, X-Frame-Options, etc.)
+function applySecurityHeaders(response) {
+  const newHeaders = new Headers(response.headers);
+
+  // HTTP Strict Transport Security (HSTS) - Força HTTPS por 2 anos com subdomínios e preload
+  newHeaders.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+
+  // Content Security Policy (CSP) blindada - Restringe estritamente fontes de scripts e conexões
+  // Permitimos apenas o Tailwind via CDN e scripts inline necessários para a UI do chat
+  newHeaders.set(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+    "connect-src 'self'; " +
+    "img-src 'self' data:; " +
+    "object-src 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self'; " +
+    "frame-ancestors 'none';"
+  );
+
+  // Proteção contra Clickjacking
+  newHeaders.set("X-Frame-Options", "DENY");
+
+  // Prevenção contra MIME-type sniffing
+  newHeaders.set("X-Content-Type-Options", "nosniff");
+
+  // Controle de Referrer rigoroso
+  newHeaders.set("Referrer-Policy", "no-referrer");
+
+  // Política de permissões de recursos do navegador (desativa câmera, mic, geolocalização)
+  newHeaders.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+
+  // Proteção contra Cross-Site Scripting (XSS) legada para navegadores antigos
+  newHeaders.set("X-XSS-Protection", "1; mode=block");
+
+  // Remove headers que revelam informações do servidor
+  newHeaders.delete("X-Powered-By");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders
+  });
+}
+
+export class ChatSessionDO {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+    this.state.blockConcurrencyWhile(async () => {
+      this.initDatabase();
+    });
+  }
+
+  initDatabase() {
+    this.state.storage.sql.exec(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT,
+        content TEXT
+      )
+    `);
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    if (request.method === "GET") {
+      const history = [...this.state.storage.sql.exec("SELECT role, content FROM messages")];
+      return Response.json({ sessionId: this.state.id.toString(), history });
+    }
+
+    try {
+      const body = await request.json();
+      const userPrompt = body.prompt;
+
+      if (!userPrompt) {
+        return new Response(JSON.stringify({ error: "O campo 'prompt' é obrigatório." }), { status: 400 });
+      }
+
+      let customSystemPrompt = await this.env.JavaScriptKV.get("system_prompt_javascriptgpt");
+      const systemPrompt = customSystemPrompt || "Você é o JavaScriptGPT, um assistente especialista em JavaScript, TypeScript e desenvolvimento web moderno. Forneça códigos limpos e utilize padrões ES6+.";
+
+      this.state.storage.sql.exec("INSERT INTO messages (role, content) VALUES (?, ?)", "user", userPrompt);
+
+      const historyRows = [...this.state.storage.sql.exec("SELECT role, content FROM messages")];
+      const messages = [{ role: "system", content: systemPrompt }, ...historyRows];
+
+      const aiResponse = await this.env.AI.run(MODEL_IA, {
+        messages: messages,
+        temperature: 0.2,
+        max_completion_tokens: 4096,
+        reasoning_effort: "high"
+      });
+
+      const respostaIA = aiResponse.response || "Erro ao gerar resposta.";
+
+      this.state.storage.sql.exec("INSERT INTO messages (role, content) VALUES (?, ?)", "assistant", respostaIA);
+
+      const sessionStrId = this.state.id.toString();
+      await this.env.JavaScriptD1.prepare(
+        `INSERT INTO global_chats (session_id, role, content, created_at) VALUES (?, ?, ?, datetime('now'))`
+      ).bind(sessionStrId, "user", userPrompt).run();
+
+      await this.env.JavaScriptD1.prepare(
+        `INSERT INTO global_chats (session_id, role, content, created_at) VALUES (?, ?, ?, datetime('now'))`
+      ).bind(sessionStrId, "assistant", respostaIA).run();
+
+      return Response.json({
+        sessionId: sessionStrId,
+        model: MODEL_IA,
+        resposta: respostaIA
+      }, {
+        headers: { "Content-Type": "application/json" }
+      });
+
+    } catch (err) {
+      return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    }
+  }
+}
+
+function getFrontendHTML() {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScriptGPT - Secure Enterprise Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col justify-between font-sans">
+    <header class="bg-slate-900 border-b border-slate-800 p-4 text-center">
+        <h1 class="text-xl font-bold text-yellow-400">⚡ JavaScriptGPT</h1>
+        <p class="text-xs text-slate-400">Proteção Máxima: HSTS + CSP Blindado + Durable Objects + D1 + KV + GLM-5.2</p>
+    </header>
+
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl w-full mx-auto">
+        <div class="flex items-start space-x-3">
+            <div class="bg-yellow-500 text-slate-950 font-bold px-3 py-1 rounded-full text-xs">AI</div>
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800 text-sm max-w-[80%]">
+                Ambiente blindado com cabeçalhos de segurança máximos ativos. Como posso ajudar com seu código hoje?
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-slate-900 border-t border-slate-800 p-4">
+        <form id="chat-form" class="max-w-3xl mx-auto flex gap-2">
+            <input type="text" id="user-input" placeholder="Digite sua dúvida de JavaScript/TypeScript..." 
+                class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-yellow-400">
+            <button type="submit" class="bg-yellow-500 text-slate-950 font-semibold px-5 py-2 rounded-lg text-sm hover:bg-yellow-400 transition">Enviar</button>
+        </form>
+    </footer>
+
+    <script>
+        const sessionId = crypto.randomUUID();
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage('Você', text, 'bg-slate-800 text-right');
+            userInput.value = '';
+
+            try {
+                // Requisições de chat utilizam a query string com sessionId, evitando requisições vazias na raiz '/'
+                const res = await fetch(\`/?sessionId=\${sessionId}\`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: text })
+                });
+                const data = await res.json();
+                appendMessage('JavaScriptGPT', data.resposta || data.error, 'bg-slate-900 border border-slate-800 text-yellow-300');
+            } catch (err) {
+                appendMessage('Erro', 'Falha ao comunicar com o servidor.', 'bg-red-900 text-white');
+            }
+        });
+
+        function appendMessage(sender, text, styleClass) {
+            const div = document.createElement('div');
+            div.className = \`p-3 rounded-lg text-sm max-w-[85%] \${styleClass} mx-4 my-2\`;
+            div.innerHTML = \`<strong>\${sender}:</strong> <p class="mt-1 whitespace-pre-wrap">\${text}</p>\`;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>`;
+}
