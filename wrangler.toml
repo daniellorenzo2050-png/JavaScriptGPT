@@ -17,7 +17,7 @@ kv_namespaces = [
 [[d1_databases]]
 binding = "JavaScriptD1"
 database_name = "javascriptgpt-db"
-database_id = "dc751040-8565-4206-ae9d-2cd3b3898cd9"5
+database_id = "dc751040-8565-4206-ae9d-2cd3b3898cd9"
 
 # 3. Configuração do Durable Objects
 [durable_objects]
